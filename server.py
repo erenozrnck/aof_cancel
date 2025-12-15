@@ -223,16 +223,23 @@ def apply_cancellations(pdf_bytes: bytes, cancelled_questions: list[int]) -> byt
                     x0, y0, x1, y1, sz = row[idx]
 
                     # mevcut harfi beyazla kapat
+                    # Tablo çizgilerini silmemek için padding verme, hatta çok az küçültülebilir
+                    # Ama harfi tam kapatması için bbox yeterli olmalı.
+                    pdf_rect = fitz.Rect(x0, y0, x1, y1)
                     page.draw_rect(
-                        fitz.Rect(x0 - 1, y0 - 1, x1 + 1, y1 + 1),
+                        pdf_rect,
                         fill=(1, 1, 1),
                         color=None
                     )
 
-                    # kırmızı İ (Unicode U+0130) — TTF ile garanti
-                    # baseline için y1'e yakın yazdır
+                    # kırmızı İ (Unicode U+0130) ortalayarak bas
+                    # Basit ortalama: (x0 + x1)/2 - biraz_sol
+                    mid_x = (x0 + x1) / 2
+                    # "İ" harfi dar olduğu için ortalamak adına yaklaşık 2-3 punto sola kaydırıyoruz
+                    text_x = mid_x - (sz * 0.2) 
+                    
                     page.insert_text(
-                        (x0, y1 - 0.7),
+                        (text_x, y1 - 0.7),
                         "İ",
                         fontsize=sz,
                         fontname=FN_REG,
