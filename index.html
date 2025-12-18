@@ -4,76 +4,338 @@
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>PDF Soru İptal Aracı</title>
+    <title>Sınav İptal & Düzenleme Aracı</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
     <style>
+        :root {
+            --primary: #4F46E5;
+            --primary-hover: #4338ca;
+            --bg-gradient: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            --card-bg: rgba(255, 255, 255, 0.95);
+            --text-main: #1f2937;
+            --text-secondary: #6b7280;
+            --border-color: #e5e7eb;
+            --shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+        }
+
         body {
-            font-family: system-ui, Arial;
-            margin: 24px;
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            background: var(--bg-gradient);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0;
+            padding: 20px;
+            color: var(--text-main);
         }
 
-        .box {
-            border: 1px solid #ddd;
-            border-radius: 12px;
-            padding: 14px;
-            max-width: 760px;
-        }
-
-        input {
-            padding: 8px 10px;
-            border: 1px solid #ccc;
-            border-radius: 8px;
+        .container {
             width: 100%;
+            max-width: 600px;
+        }
+
+        .card {
+            background: var(--card-bg);
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: var(--shadow);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.5);
+            transition: transform 0.3s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-2px);
+        }
+
+        h1 {
+            font-size: 24px;
+            font-weight: 600;
+            text-align: center;
+            margin-bottom: 8px;
+            color: #111827;
+        }
+
+        p.subtitle {
+            text-align: center;
+            color: var(--text-secondary);
+            margin-bottom: 32px;
+            font-size: 14px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            font-size: 14px;
+            font-weight: 500;
+            margin-bottom: 8px;
+            color: #374151;
+        }
+
+        input[type="text"],
+        input[type="date"],
+        input[type="file"] {
+            width: 100%;
+            padding: 12px 16px;
+            border-radius: 12px;
+            border: 1px solid var(--border-color);
+            background: #fff;
+            font-size: 15px;
+            font-family: inherit;
+            transition: all 0.2s;
+            box-sizing: border-box;
+            outline: none;
+        }
+
+        input:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+        }
+
+        input::placeholder {
+            color: #9ca3af;
+        }
+
+        .file-drop-area {
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            padding: 24px;
+            border: 2px dashed var(--border-color);
+            border-radius: 12px;
+            transition: 0.2s;
+            background: #f9fafb;
+            text-align: center;
+            cursor: pointer;
+            box-sizing: border-box;
+        }
+
+        .file-drop-area:hover,
+        .file-drop-area.dragover {
+            border-color: var(--primary);
+            background: #eff6ff;
+        }
+
+        .file-msg {
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--text-secondary);
+            pointer-events: none;
+        }
+
+        .file-input {
+            position: absolute;
+            left: 0;
+            top: 0;
+            height: 100%;
+            width: 100%;
+            opacity: 0;
+            cursor: pointer;
         }
 
         button {
-            padding: 10px 12px;
-            border: 1px solid #ccc;
-            border-radius: 10px;
+            width: 100%;
+            padding: 14px;
+            border: none;
+            border-radius: 12px;
+            background: var(--primary);
+            color: white;
+            font-size: 16px;
+            font-weight: 600;
             cursor: pointer;
+            transition: all 0.2s;
             margin-top: 10px;
+            box-shadow: 0 4px 6px -1px rgba(79, 70, 229, 0.2);
         }
 
-        .row {
-            display: grid;
-            gap: 10px;
+        button:hover {
+            background: var(--primary-hover);
+            transform: translateY(-1px);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        button:disabled {
+            opacity: 0.7;
+            cursor: not-allowed;
         }
 
         .hint {
-            font-size: 13px;
-            opacity: .75;
+            font-size: 12px;
+            color: #9ca3af;
+            margin-top: 6px;
+        }
+
+        .success-box {
+            margin-top: 24px;
+            padding: 16px;
+            background: #ecfdf5;
+            border: 1px solid #d1fae5;
+            border-radius: 12px;
+            text-align: center;
+            display: none;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .success-box a {
+            color: #059669;
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 15px;
+            display: inline-block;
+        }
+
+        .success-box a:hover {
+            text-decoration: underline;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* Loading Spinner */
+        .spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: #fff;
+            animation: spin 0.8s ease-in-out infinite;
+            margin-right: 8px;
+            vertical-align: middle;
+            display: none;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
         }
     </style>
 </head>
 
 <body>
-    <h2>PDF’de İptal Soruları Uygula</h2>
 
-    <div class="box row">
-        <label>PDF Seç:
-            <input type="file" id="pdfFile" accept="application/pdf" />
-        </label>
+    <div class="container">
+        <div class="card">
+            <h1>Sınav İptal & Düzenleme</h1>
+            <p class="subtitle">PDF soru iptali ve cevap anahtarı güncelleme aracı</p>
 
-        <label>İptal edilen sorular (örn: 3, 8, 12):
-            <input id="iptalInput" placeholder="3, 8, 12" />
-        </label>
+            <div class="form-group">
+                <label>Sınav PDF Dosyası</label>
+                <div class="file-drop-area" id="dropArea">
+                    <span class="file-msg" id="fileMsg">Dosyayı buraya sürükleyin veya seçin</span>
+                    <input class="file-input" type="file" id="pdfFile" accept="application/pdf">
+                </div>
+            </div>
 
-        <label>Cevabı Değişen Sorular (örn: 60:A, 12:C):
-            <input id="degisiklikInput" placeholder="60:A, 12:C" />
-        </label>
+            <div class="form-group">
+                <label for="iptalInput">İptal Edilen Sorular</label>
+                <input type="text" id="iptalInput" placeholder="Örn: 3, 8, 12">
+                <div class="hint">Sadece iptal etmek istediğiniz soru numaralarını virgülle ayırarak girin.</div>
+            </div>
 
-        <label>Tarih:
-            <input type="date" id="tarihInput" />
-        </label>
+            <div class="form-group">
+                <label for="degisiklikInput">Cevabı Değişen Sorular</label>
+                <input type="text" id="degisiklikInput" placeholder="Örn: 60:A, 12:C">
+                <div class="hint">Format: SoruNo:YeniCevap (Birden fazla ise virgülle ayırın)</div>
+            </div>
 
-        <button id="runBtn">Uygula ve PDF Oluştur</button>
-        <div class="hint">Not: Sunucu endpoint’i <code>/cancel</code> olmalı.</div>
+            <div class="form-group">
+                <label for="tarihInput">Duyuru Tarihi</label>
+                <input type="date" id="tarihInput">
+            </div>
 
-        <a id="downloadLink" style="display:none; margin-top:10px;">İndir</a>
+            <button id="runBtn">
+                <div class="spinner" id="spinner"></div>
+                <span id="btnText">Uygula ve PDF Oluştur</span>
+            </button>
+
+            <div class="success-box" id="successBox">
+                <svg style="width:24px;height:24px;vertical-align:middle;margin-right:8px;color:#059669" fill="none"
+                    class="w-6 h-6" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                </svg>
+                <a id="downloadLink" href="#" download>İşlenen PDF dosyasını indir</a>
+            </div>
+        </div>
     </div>
 
     <script>
-        // Sayfa yüklendiğinde bugünün tarihini input'a ata
+        // Tarih alanını bugünün tarihi ile doldur
         document.getElementById("tarihInput").valueAsDate = new Date();
+
+        const fileInput = document.getElementById("pdfFile");
+        const fileMsg = document.getElementById("fileMsg");
+        const dropArea = document.getElementById("dropArea");
+        const runBtn = document.getElementById("runBtn");
+        const successBox = document.getElementById("successBox");
+        const downloadLink = document.getElementById("downloadLink");
+        const spinner = document.getElementById("spinner");
+        const btnText = document.getElementById("btnText");
+
+        // Dosya sürükle bırak efektleri
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+            dropArea.addEventListener(eventName, preventDefaults, false);
+        });
+
+        function preventDefaults(e) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+
+        ['dragenter', 'dragover'].forEach(eventName => {
+            dropArea.addEventListener(eventName, () => dropArea.classList.add('dragover'), false);
+        });
+
+        ['dragleave', 'drop'].forEach(eventName => {
+            dropArea.addEventListener(eventName, () => dropArea.classList.remove('dragover'), false);
+        });
+
+        dropArea.addEventListener('drop', handleDrop, false);
+
+        function handleDrop(e) {
+            const dt = e.dataTransfer;
+            const files = dt.files;
+            fileInput.files = files;
+            updateFileMsg();
+        }
+
+        fileInput.addEventListener('change', updateFileMsg);
+
+        function updateFileMsg() {
+            if (fileInput.files && fileInput.files.length > 0) {
+                fileMsg.textContent = fileInput.files[0].name;
+                fileMsg.style.color = '#4F46E5';
+                dropArea.style.borderColor = '#4F46E5';
+                dropArea.style.background = '#eff6ff';
+            } else {
+                fileMsg.textContent = "Dosyayı buraya sürükleyin veya seçin";
+                fileMsg.style.color = '#6b7280';
+                dropArea.style.borderColor = '#e5e7eb';
+                dropArea.style.background = '#f9fafb';
+            }
+        }
 
         function parseIptal(text) {
             return [...new Set(
@@ -86,45 +348,66 @@
             )];
         }
 
-        document.getElementById("runBtn").addEventListener("click", async () => {
-            const f = document.getElementById("pdfFile").files[0];
-            if (!f) return alert("PDF seçmelisin.");
+        function setLoading(isLoading) {
+            if (isLoading) {
+                runBtn.disabled = true;
+                spinner.style.display = 'inline-block';
+                btnText.textContent = "İşleniyor...";
+                successBox.style.display = 'none';
+            } else {
+                runBtn.disabled = false;
+                spinner.style.display = 'none';
+                btnText.textContent = "Uygula ve PDF Oluştur";
+            }
+        }
 
-            const iptal = parseIptal(document.getElementById("iptalInput").value);
-            const degisiklik = document.getElementById("degisiklikInput").value;
-            const tarih_val = document.getElementById("tarihInput").value;
+        runBtn.addEventListener("click", async () => {
+            const f = fileInput.files[0];
+            if (!f) return alert("Lütfen bir PDF dosyası seçin.");
 
-            // Tarih formatını DD.MM.YYYY çevirelim (input type=date YYYY-MM-DD verir)
-            let formattedDate = "";
-            if (tarih_val) {
-                const parts = tarih_val.split("-"); // [YYYY, MM, DD]
-                if (parts.length === 3) {
-                    formattedDate = `${parts[2]}.${parts[1]}.${parts[0]}`;
+            setLoading(true);
+
+            try {
+                const iptal = parseIptal(document.getElementById("iptalInput").value);
+                const degisiklik = document.getElementById("degisiklikInput").value;
+                const tarih_val = document.getElementById("tarihInput").value;
+
+                let formattedDate = "";
+                if (tarih_val) {
+                    const parts = tarih_val.split("-");
+                    if (parts.length === 3) {
+                        formattedDate = `${parts[2]}.${parts[1]}.${parts[0]}`;
+                    }
                 }
+
+                const fd = new FormData();
+                fd.append("pdf", f);
+                fd.append("iptal", iptal.join(","));
+                fd.append("degisiklik", degisiklik);
+                fd.append("tarih", formattedDate);
+
+                const res = await fetch("/cancel", { method: "POST", body: fd });
+
+                if (!res.ok) {
+                    const t = await res.text().catch(() => "");
+                    throw new Error(t || "Sunucu hatası: " + res.status);
+                }
+
+                const blob = await res.blob();
+                const url = URL.createObjectURL(blob);
+
+                downloadLink.href = url;
+                downloadLink.download = "duzenlenmis_sinav.pdf";
+                successBox.style.display = 'block';
+
+            } catch (err) {
+                alert("Hata oluştu: " + err.message);
+            } finally {
+                setLoading(false);
             }
-
-            const fd = new FormData();
-            fd.append("pdf", f);
-            fd.append("iptal", iptal.join(","));
-            fd.append("degisiklik", degisiklik);
-            fd.append("tarih", formattedDate);
-
-            const res = await fetch("/cancel", { method: "POST", body: fd });
-            if (!res.ok) {
-                const t = await res.text().catch(() => "");
-                return alert("Hata: " + (t || res.status));
-            }
-
-            const blob = await res.blob();
-            const url = URL.createObjectURL(blob);
-
-            const a = document.getElementById("downloadLink");
-            a.href = url;
-            a.download = "sinav_iptalli.pdf";
-            a.textContent = "İptalli PDF’i indir";
-            a.style.display = "inline-block";
         });
     </script>
+
 </body>
 
 </html>
