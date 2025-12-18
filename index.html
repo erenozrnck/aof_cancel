@@ -57,6 +57,14 @@
             <input id="iptalInput" placeholder="3, 8, 12" />
         </label>
 
+        <label>Cevabı Değişen Sorular (örn: 60:A, 12:C):
+            <input id="degisiklikInput" placeholder="60:A, 12:C" />
+        </label>
+
+        <label>Tarih:
+            <input type="date" id="tarihInput" />
+        </label>
+
         <button id="runBtn">Uygula ve PDF Oluştur</button>
         <div class="hint">Not: Sunucu endpoint’i <code>/cancel</code> olmalı.</div>
 
@@ -64,6 +72,9 @@
     </div>
 
     <script>
+        // Sayfa yüklendiğinde bugünün tarihini input'a ata
+        document.getElementById("tarihInput").valueAsDate = new Date();
+
         function parseIptal(text) {
             return [...new Set(
                 (text || "")
@@ -80,10 +91,23 @@
             if (!f) return alert("PDF seçmelisin.");
 
             const iptal = parseIptal(document.getElementById("iptalInput").value);
+            const degisiklik = document.getElementById("degisiklikInput").value;
+            const tarih_val = document.getElementById("tarihInput").value;
+
+            // Tarih formatını DD.MM.YYYY çevirelim (input type=date YYYY-MM-DD verir)
+            let formattedDate = "";
+            if (tarih_val) {
+                const parts = tarih_val.split("-"); // [YYYY, MM, DD]
+                if (parts.length === 3) {
+                    formattedDate = `${parts[2]}.${parts[1]}.${parts[0]}`;
+                }
+            }
 
             const fd = new FormData();
             fd.append("pdf", f);
             fd.append("iptal", iptal.join(","));
+            fd.append("degisiklik", degisiklik);
+            fd.append("tarih", formattedDate);
 
             const res = await fetch("/cancel", { method: "POST", body: fd });
             if (!res.ok) {

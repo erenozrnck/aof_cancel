@@ -45,6 +45,7 @@ FN_REG = "EmbedReg"
 FN_BOLD = "EmbedBold"
 
 
+
 def parse_cancelled(s: str) -> list[int]:
     parts = re.split(r"[\s,;]+", (s or "").strip())
     nums = []
@@ -58,6 +59,26 @@ def parse_cancelled(s: str) -> list[int]:
         except:
             pass
     return sorted(set(nums))
+
+
+def parse_changes(s: str) -> dict[int, str]:
+    """
+    "60:A, 12:C" -> {60: "A", 12: "C"}
+    """
+    changes = {}
+    parts = re.split(r"[\s,;]+", (s or "").strip())
+    for p in parts:
+        if ":" in p:
+            q_str, ans = p.split(":", 1)
+            try:
+                q = int(q_str)
+                ans = ans.upper().strip()
+                if q > 0 and len(ans) == 1 and ans in "ABCDE":
+                    changes[q] = ans
+            except:
+                pass
+    return changes
+
 
 
 def get_fontsize_stats(page: fitz.Page):
@@ -94,7 +115,7 @@ def get_fontsize_stats(page: fitz.Page):
     return body_fs, bold_fs
 
 
-def apply_cancellations(pdf_bytes: bytes, cancelled_questions: list[int]) -> bytes:
+def apply_cancellations(pdf_bytes: bytes, cancelled_questions: list[int], changed_answers: dict[int, str], date_str: str) -> bytes:
     cancelled = set(cancelled_questions)
     doc = fitz.open(stream=pdf_bytes, filetype="pdf")
 
@@ -184,14 +205,14 @@ def apply_cancellations(pdf_bytes: bytes, cancelled_questions: list[int]) -> byt
                     color=(0, 0, 0),
                 )
 
-    # --- 2) Cevap anahtarı: harfi kapat + kırmızı "İ" bas ---
+    # --- 2) Cevap anahtarı: harfi kapat + kırmızı "İ" veya yeni harf bas ---
     ak_page_no = None
     for pno in range(doc.page_count):
         if doc[pno].search_for("Cevap Anahtarı"):
             ak_page_no = pno
             break
 
-    if ak_page_no is not None and cancelled:
+    if ak_page_no is not None and (cancelled or changed_answers):
         page = doc[ak_page_no]
         d = page.get_text("dict")
 
@@ -207,24 +228,31 @@ def apply_cancellations(pdf_bytes: bytes, cancelled_questions: list[int]) -> byt
                         x0, y0, x1, y1 = s["bbox"]
                         candidates.append((x0, y0, x1, y1, float(s.get("size") or 11.0)))
 
+        # Tablo altı koordinat için
+        max_y = 0.0
+
         if candidates:
             # satırları y'ye göre grupla
             buckets = collections.defaultdict(list)
             for x0, y0, x1, y1, sz in candidates:
                 buckets[round(y0, 1)].append((x0, y0, x1, y1, sz))
+                if y1 > max_y:
+                    max_y = y1
 
             # en kalabalık satır cevap satırı olsun
             best_y = max(buckets.keys(), key=lambda k: len(buckets[k]))
             row = sorted(buckets[best_y], key=lambda r: r[0])
 
-            for q in cancelled:
+            # Hem iptalleri hem değişiklikleri işle
+            # Önce tüm etkilenen soruları birleştir
+            all_affected = set(cancelled) | set(changed_answers.keys())
+            
+            for q in all_affected:
                 idx = q - 1
                 if 0 <= idx < len(row):
                     x0, y0, x1, y1, sz = row[idx]
 
                     # mevcut harfi beyazla kapat
-                    # Tablo çizgilerini silmemek için padding verme, hatta çok az küçültülebilir
-                    # Ama harfi tam kapatması için bbox yeterli olmalı.
                     pdf_rect = fitz.Rect(x0, y0, x1, y1)
                     page.draw_rect(
                         pdf_rect,
@@ -232,20 +260,49 @@ def apply_cancellations(pdf_bytes: bytes, cancelled_questions: list[int]) -> byt
                         color=None
                     )
 
-                    # kırmızı İ (Unicode U+0130) ortalayarak bas
-                    # Basit ortalama: (x0 + x1)/2 - biraz_sol
+                    # Basılacak karakter ve renk belirle
+                    target_char = "İ"
+                    target_color = (1, 0, 0) # Kırmızı
+
+                    if q in changed_answers:
+                         target_char = changed_answers[q]
+                    else:
+                         # q in cancelled
+                         target_char = "İ"
+
+                    # Ortala ve bas
                     mid_x = (x0 + x1) / 2
-                    # "İ" harfi dar olduğu için ortalamak adına yaklaşık 2-3 punto sola kaydırıyoruz
+                    # Hafif sol ayarı
                     text_x = mid_x - (sz * 0.2) 
                     
                     page.insert_text(
                         (text_x, y1 - 0.7),
-                        "İ",
+                        target_char,
                         fontsize=sz,
                         fontname=FN_REG,
                         fontfile=FONT_REG,
-                        color=(1, 0, 0)
+                        color=target_color
                     )
+
+        # --- 3) Değişiklik metinlerini tablo altına ekle ---
+        # Örnek: "60. Sorunun cevabı A olarak güncellenmiştir. Tarih: 12.12.2025"
+        if changed_answers:
+            start_y = max_y + 30 # Tablonun biraz altına
+            line_height = 14
+            
+            sorted_changes = sorted(changed_answers.items())
+            
+            for i, (q, ans) in enumerate(sorted_changes):
+                msg = f"{q}. Sorunun cevabı {ans} olarak güncellenmiştir. Tarih: {date_str}"
+                page.insert_text(
+                    (50, start_y + (i * line_height)),
+                    msg,
+                    fontsize=10,
+                    fontname=FN_REG,
+                    fontfile=FONT_REG,
+                    color=(0, 0, 0)
+                )
+
 
     out = doc.tobytes()
     doc.close()
@@ -253,8 +310,22 @@ def apply_cancellations(pdf_bytes: bytes, cancelled_questions: list[int]) -> byt
 
 
 @app.post("/cancel")
-async def cancel(pdf: UploadFile, iptal: str = Form("")):
+async def cancel(
+    pdf: UploadFile, 
+    iptal: str = Form(""), 
+    degisiklik: str = Form(""), 
+    tarih: str = Form("")
+):
     cancelled = parse_cancelled(iptal)
+    changes = parse_changes(degisiklik)
+    
+    # Tarih boşsa bugünün tarihi (ama client'tan gelmesi beklenir veya burada üretilir)
+    # Burada client göndermezse "..." kalmasın diye fallback yapabiliriz
+    if not tarih:
+        # Basit fallback 
+        import datetime
+        tarih = datetime.date.today().strftime("%d.%m.%Y")
+
     pdf_bytes = await pdf.read()
-    out = apply_cancellations(pdf_bytes, cancelled)
+    out = apply_cancellations(pdf_bytes, cancelled, changes, tarih)
     return Response(content=out, media_type="application/pdf")
