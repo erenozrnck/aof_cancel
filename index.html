@@ -368,9 +368,26 @@
             setLoading(true);
 
             try {
-                const iptal = parseIptal(document.getElementById("iptalInput").value);
-                const degisiklik = document.getElementById("degisiklikInput").value;
+                const iptalText = document.getElementById("iptalInput").value;
+                const degisiklikText = document.getElementById("degisiklikInput").value;
                 const tarih_val = document.getElementById("tarihInput").value;
+
+                const iptal = parseIptal(iptalText);
+
+                // Değişen soruların numaralarını parse et
+                const degisiklikKeys = [];
+                (degisiklikText || "").split(/[\s,;]+/).forEach(p => {
+                    if (p.includes(":")) {
+                        const q = parseInt(p.split(":")[0]);
+                        if (!isNaN(q) && q > 0) degisiklikKeys.push(q);
+                    }
+                });
+
+                // Kesişim kontrolü
+                const intersection = iptal.filter(x => degisiklikKeys.includes(x));
+                if (intersection.length > 0) {
+                    throw new Error(`Şu sorular hem İptal hem de Değişiklik listesinde olamaz: ${intersection.join(", ")}`);
+                }
 
                 let formattedDate = "";
                 if (tarih_val) {
@@ -383,7 +400,7 @@
                 const fd = new FormData();
                 fd.append("pdf", f);
                 fd.append("iptal", iptal.join(","));
-                fd.append("degisiklik", degisiklik);
+                fd.append("degisiklik", degisiklikText);
                 fd.append("tarih", formattedDate);
 
                 const res = await fetch("/cancel", { method: "POST", body: fd });
@@ -401,7 +418,7 @@
                 successBox.style.display = 'block';
 
             } catch (err) {
-                alert("Hata oluştu: " + err.message);
+                alert("Hata: " + err.message);
             } finally {
                 setLoading(false);
             }
