@@ -14,17 +14,27 @@ Gerekli kütüphaneleri yüklemek için terminalde proje dizininde şu komutu ç
 pip install fastapi uvicorn pymupdf python-multipart
 ```
 
-## Başlatma
 
-Sunucuyu başlatmak için şu komutu kullanın:
+## Hızlı Başlatma (Masaüstü Uygulaması Gibi)
 
+Projenin içindeki `baslat.command` dosyasına çift tıklayarak uygulamayı kolayca açabilirsiniz.
+Bu dosya otomatik olarak terminali açar, sunucuyu başlatır ve tarayıcınızı `http://127.0.0.1:8000` adresine yönlendirir.
+
+Eğer dosya açılmıyorsa (yetki hatası), terminalde şu komutu bir kez çalıştırın:
 ```bash
-uvicorn server:app --reload
+chmod +x baslat.command
 ```
 
-## Kullanım
-
-1. Sunucu çalıştıktan sonra tarayıcınızda `http://127.0.0.1:8000` adresine gidin.
+## Manuel Başlatma (Terminalden)
+1. Terminalde proje klasörüne gidin:
+   ```bash
+   cd /path/to/project
+   ```
+2. Sunucuyu başlatın:
+   ```bash
+   uvicorn server:app --reload
+   ```
+3. Tarayıcıda `http://127.0.0.1:8000` adresine gidin.
 2. "PDF Seç" butonuna tıklayarak işlem yapmak istediğiniz PDF dosyasını yükleyin.
 3. "İptal edilen sorular" kutusuna iptal edilecek soru numaralarını virgülle ayırarak girin (örn: 3, 5, 12).
 4. "Uygula ve PDF Oluştur" butonuna tıklayın.
